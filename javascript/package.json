@@ -1,0 +1,37 @@
+{
+  "name": "golden-codex-reader",
+  "version": "1.0.0",
+  "description": "Read and verify Golden Codex metadata from digital artworks",
+  "main": "golden-codex-reader.js",
+  "types": "golden-codex-reader.d.ts",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "golden-codex",
+    "metadata",
+    "artwork",
+    "provenance",
+    "xmp",
+    "art",
+    "nft",
+    "digital-art",
+    "soulwhisper"
+  ],
+  "author": "Metavolve Labs, Inc. <curator@golden-codex.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codex-curator/golden-codex-reader.git"
+  },
+  "homepage": "https://goldencodex.art",
+  "bugs": {
+    "url": "https://github.com/codex-curator/golden-codex-reader/issues"
+  },
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

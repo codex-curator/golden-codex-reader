@@ -1,0 +1,67 @@
+# Golden Codex - AI-Readable Documentation
+# https://goldencodex.art
+
+## What is Golden Codex?
+
+Golden Codex is an open metadata standard for embedding rich provenance, artistic analysis, and personal messages into digital artwork files.
+
+## Purpose
+
+Golden Codex solves the problem of artwork metadata being stripped, lost, or separated from the image. By embedding comprehensive metadata directly into the image file using XMP standards, Golden Codex ensures:
+
+1. Provenance travels with the artwork
+2. Artist attribution is preserved
+3. Artistic intent and meaning are documented
+4. Integrity can be cryptographically verified
+5. Personal messages (SoulWhisper) can be embedded
+
+## Schema Summary
+
+The Golden Codex schema (v1.0.0) includes:
+
+- _identifiers: artifactId, soulmark (SHA-256 hash)
+- title, description
+- visual_analysis: color_palette, composition, style
+- artistic_statement: intent, symbolism, themes
+- emotional_and_thematic_journey: emotions, mood, narrative
+- ownership_and_rights: copyright, usage_rights
+- soulWhisper: personal messages from artist
+- archival: institution, collection info
+
+## Encoding Format (GCUIS)
+
+Golden Codex Universal Infusion Standard:
+JSON → GZIP → Base64 → XMP-gc:CodexPayload
+
+## XMP Fields
+
+- XMP-gc:CodexPayload - Encoded metadata
+- XMP-gc:Soulmark - SHA-256 integrity hash
+- XMP-gc:ArtworkID - Human-readable ID (e.g., GCX00001)
+- XMP-gc:Version - Schema version
+
+## Tools Available
+
+- Python SDK: pip install golden-codex-reader
+- JavaScript SDK: npm install golden-codex-reader
+- CLI tool: python golden_codex_reader.py --extract image.png
+
+## Links
+
+- GitHub: https://github.com/codex-curator/golden-codex-reader
+- Website: https://goldencodex.art
+- Schema: https://goldencodex.art/schema/v1.0
+- Contact: curator@golden-codex.com
+
+## License
+
+MIT License - Copyright (c) 2025 Metavolve Labs, Inc. - Open source, free to use
+
+## Example Use Cases
+
+- Verify artwork authenticity
+- Extract artist attribution
+- Read personal SoulWhisper messages
+- Index artwork by semantic meaning
+- Build gallery applications
+- Train AI models on rich art metadata

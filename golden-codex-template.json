@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "1.0.0",
+
+  "timestamp": {
+    "created": "",
+    "enriched": "",
+    "embedded": ""
+  },
+
+  "_identifiers": {
+    "uuid": "",
+    "artifactId": "",
+    "codexId": "",
+    "soulmark": ""
+  },
+
+  "title": "",
+  "description": "",
+
+  "visual_analysis": {
+    "color_palette": [],
+    "composition": "",
+    "lighting_and_shading": "",
+    "style_and_technique": "",
+    "objective_description": ""
+  },
+
+  "artistic_statement": {
+    "intent": "",
+    "symbolism": {},
+    "themes": [],
+    "cultural_context": "",
+    "historical_period": ""
+  },
+
+  "contextual_graph": {
+    "keywords": [],
+    "related_artistic_movements": [],
+    "related_concepts": [],
+    "influences": [],
+    "schema_org_type": "VisualArtwork"
+  },
+
+  "emotional_and_thematic_journey": {
+    "primary_emotion": "",
+    "secondary_emotions": [],
+    "mood": "",
+    "narrative_arc": ""
+  },
+
+  "symbolism_and_iconography": {
+    "primary_symbols": {},
+    "secondary_symbols": {},
+    "archetypal_elements": []
+  },
+
+  "cultural_and_artistic_context": {
+    "period_and_movement": "",
+    "influences": "",
+    "iconography": "",
+    "cultural_significance": ""
+  },
+
+  "provenance_and_lineage": {
+    "artist_information": "",
+    "creation_date": "",
+    "technical_lineage": "",
+    "provenance": ""
+  },
+
+  "technical_details": {
+    "medium_and_technique": "",
+    "dimensions": {
+      "width": 0,
+      "height": 0,
+      "unit": "pixels"
+    },
+    "quality_assessment": "",
+    "file_format": "",
+    "color_space": "",
+    "bit_depth": "",
+    "file_size": "",
+    "resolution_dpi": ""
+  },
+
+  "creation_credits": {
+    "human_director": {
+      "name": "",
+      "role": ""
+    },
+    "ai_artist_persona": {
+      "name": "",
+      "description": ""
+    },
+    "ai_model": {
+      "name": "",
+      "version": "",
+      "provider": ""
+    },
+    "contributors": []
+  },
+
+  "ownership_and_rights": {
+    "copyright": {
+      "holder": "",
+      "year": "",
+      "statement": ""
+    },
+    "usage_rights": {
+      "commercial_use": false,
+      "modifications_allowed": false,
+      "attribution_required": true,
+      "attribution_text": "",
+      "usage_notes": ""
+    }
+  },
+
+  "soulWhisper": {
+    "enabled": false,
+    "message": "",
+    "recipient": "",
+    "sender": "",
+    "language": "en",
+    "visibility": "private",
+    "date": "",
+    "occasion": ""
+  },
+
+  "archival": {
+    "institution": "",
+    "collection_name": "",
+    "curator_notes": "",
+    "alt_text": ""
+  },
+
+  "embedding": {
+    "xmp_embedded": true,
+    "iptc_embedded": true,
+    "custom_fields": [
+      "XMP-gc:ArtworkID",
+      "XMP-gc:Soulmark",
+      "XMP-gc:CodexPayload",
+      "XMP-gc:Version"
+    ]
+  },
+
+  "validation": {
+    "schema_compliance": true,
+    "required_fields": [
+      "_identifiers.artifactId",
+      "title",
+      "ownership_and_rights.copyright.holder"
+    ],
+    "warnings_issued": [],
+    "completeness_percentage": 0.0,
+    "last_validated": ""
+  }
+}
