@@ -133,9 +133,25 @@
     "alt_text": ""
   },
 
+  "discovery": {
+    "schema_url": "https://goldencodex.art/schema/v1.0",
+    "reader_url": "https://github.com/codex-curator/golden-codex-reader",
+    "verification_url": "https://goldencodex.art/verify",
+    "registry_url": ""
+  },
+
+  "standard_metadata": {
+    "iptc_credit": "Golden Codex Certified | goldencodex.art",
+    "iptc_source": "https://github.com/codex-curator/golden-codex-reader",
+    "xmp_rights_web_statement": "https://goldencodex.art/terms",
+    "dc_source": "Golden Codex v1.0 | github.com/codex-curator/golden-codex-reader",
+    "iptc_instructions": "Contains Golden Codex metadata. Extract with: github.com/codex-curator/golden-codex-reader"
+  },
+
   "embedding": {
     "xmp_embedded": true,
     "iptc_embedded": true,
+    "standard_fields_embedded": true,
     "custom_fields": [
       "XMP-gc:ArtworkID",
       "XMP-gc:Soulmark",
