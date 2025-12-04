@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golden Codex Reader</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 400px;
+      min-height: 300px;
+      max-height: 600px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e8e8e8;
+      overflow-y: auto;
+    }
+
+    .header {
+      background: linear-gradient(90deg, #7b2d8e 0%, #c9a227 100%);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header .logo {
+      font-size: 24px;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #4a4a6a;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+    }
+
+    .upload-zone:hover {
+      border-color: #c9a227;
+      background: rgba(201, 162, 39, 0.1);
+    }
+
+    .upload-zone.dragover {
+      border-color: #c9a227;
+      background: rgba(201, 162, 39, 0.2);
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .upload-text {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .upload-text strong {
+      color: #c9a227;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .or-divider {
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      margin: 16px 0;
+      position: relative;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: #333;
+    }
+
+    .or-divider::before { left: 0; }
+    .or-divider::after { right: 0; }
+
+    .paste-area {
+      width: 100%;
+      height: 80px;
+      background: #0d0d1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      color: #e8e8e8;
+      font-family: monospace;
+      font-size: 12px;
+      resize: none;
+    }
+
+    .paste-area::placeholder {
+      color: #555;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 12px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #7b2d8e 0%, #c9a227 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Results Styles */
+    .results {
+      display: none;
+    }
+
+    .results.active {
+      display: block;
+    }
+
+    .gc-metadata {
+      background: #0d0d1a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .gc-header {
+      background: linear-gradient(90deg, #7b2d8e 0%, #c9a227 100%);
+      padding: 16px;
+    }
+
+    .gc-header h2 {
+      font-size: 16px;
+      color: white;
+      margin-bottom: 4px;
+    }
+
+    .gc-id {
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      font-family: monospace;
+    }
+
+    .gc-soulwhisper {
+      background: linear-gradient(135deg, #2d1f3d 0%, #1a1a2e 100%);
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid #333;
+    }
+
+    .gc-soulwhisper-icon {
+      font-size: 24px;
+    }
+
+    .gc-soulwhisper-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #c9a227;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .gc-soulwhisper-message {
+      font-style: italic;
+      color: #e8e8e8;
+      line-height: 1.5;
+    }
+
+    .gc-soulwhisper-sender {
+      font-size: 12px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .gc-section {
+      padding: 16px;
+      border-bottom: 1px solid #222;
+    }
+
+    .gc-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .gc-section-content {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .gc-emotion {
+      font-size: 18px;
+      color: #c9a227;
+      font-weight: 500;
+    }
+
+    .gc-mood {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .gc-colors {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .gc-color {
+      text-align: center;
+    }
+
+    .gc-color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #333;
+      margin-bottom: 4px;
+    }
+
+    .gc-color-name {
+      font-size: 10px;
+      color: #888;
+      max-width: 50px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gc-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .gc-tag {
+      background: #222;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .gc-footer {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0a0a14;
+    }
+
+    .gc-schema {
+      font-size: 10px;
+      color: #555;
+    }
+
+    .gc-link {
+      font-size: 11px;
+      color: #c9a227;
+      text-decoration: none;
+    }
+
+    .gc-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Status messages */
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .status.error {
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid #dc3545;
+      color: #ff6b6b;
+    }
+
+    .status.success {
+      background: rgba(40, 167, 69, 0.2);
+      border: 1px solid #28a745;
+      color: #5fd068;
+    }
+
+    .status.info {
+      background: rgba(201, 162, 39, 0.2);
+      border: 1px solid #c9a227;
+      color: #c9a227;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #333;
+      border-top-color: #c9a227;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .back-btn {
+      background: transparent;
+      border: 1px solid #444;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .back-btn:hover {
+      border-color: #666;
+      color: #ccc;
+    }
+
+    /* No metadata state */
+    .no-metadata {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+    }
+
+    .no-metadata-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><span class="logo">📜</span> Golden Codex Reader</h1>
+  </div>
+
+  <div class="content">
+    <!-- Input Section -->
+    <div id="inputSection">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">
+          <strong>Drop an image</strong> or click to browse
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+
+      <div class="or-divider">or paste Base64 payload</div>
+
+      <textarea
+        class="paste-area"
+        id="pasteArea"
+        placeholder="Paste GCUIS Base64 payload here..."
+      ></textarea>
+
+      <button class="btn btn-primary" id="decodeBtn">
+        Decode Golden Codex
+      </button>
+
+      <div id="statusMessage"></div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="results">
+      <button class="btn back-btn" id="backBtn">← Back</button>
+      <div id="metadataDisplay"></div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingSection" style="display: none;">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Decoding metadata...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="decoder.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
