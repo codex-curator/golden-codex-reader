@@ -1,0 +1,20 @@
+/* Verilian Reader - Content Styles */
+
+.gcx-badge-container {
+  pointer-events: none;
+}
+
+.gcx-badge {
+  pointer-events: auto;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gcx-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Prevent badge from affecting layout */
+.gcx-badge-container * {
+  box-sizing: border-box;
+}

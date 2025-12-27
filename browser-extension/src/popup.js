@@ -1,250 +1,182 @@
 /**
- * Golden Codex Reader - Popup Script
- * Copyright (c) 2025 Metavolve Labs, Inc.
+ * Verilian Reader - Popup Script
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  const uploadZone = document.getElementById('uploadZone');
-  const fileInput = document.getElementById('fileInput');
-  const pasteArea = document.getElementById('pasteArea');
-  const decodeBtn = document.getElementById('decodeBtn');
-  const statusMessage = document.getElementById('statusMessage');
-  const inputSection = document.getElementById('inputSection');
-  const resultsSection = document.getElementById('resultsSection');
-  const loadingSection = document.getElementById('loadingSection');
-  const metadataDisplay = document.getElementById('metadataDisplay');
-  const backBtn = document.getElementById('backBtn');
+// State elements
+const initialState = document.getElementById('initial-state');
+const loadingState = document.getElementById('loading-state');
+const verifiedXmpState = document.getElementById('verified-xmp-state');
+const verifiedHashState = document.getElementById('verified-hash-state');
+const notFoundState = document.getElementById('not-found-state');
+const loadingText = document.getElementById('loading-text');
+const dropZone = document.getElementById('drop-zone');
+const registryCount = document.getElementById('registry-count');
 
-  let currentPayload = null;
-
-  // File upload handling
-  uploadZone.addEventListener('click', () => fileInput.click());
-
-  uploadZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadZone.classList.add('dragover');
-  });
-
-  uploadZone.addEventListener('dragleave', () => {
-    uploadZone.classList.remove('dragover');
-  });
-
-  uploadZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadZone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      processImageFile(file);
-    } else {
-      showStatus('Please drop an image file', 'error');
+/**
+ * Show specific state, hide others
+ */
+function showState(stateName) {
+  const states = ['initial', 'loading', 'verified-xmp', 'verified-hash', 'not-found'];
+  states.forEach(s => {
+    const el = document.getElementById(s + '-state');
+    if (el) {
+      el.classList.toggle('hidden', s !== stateName);
     }
   });
+}
 
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      processImageFile(file);
-    }
-  });
+/**
+ * Display XMP metadata
+ */
+function displayXmpMetadata(metadata) {
+  showState('verified-xmp');
 
-  // Decode button
-  decodeBtn.addEventListener('click', async () => {
-    const payload = pasteArea.value.trim();
-    if (payload) {
-      await decodePayload(payload);
-    } else {
-      showStatus('Please paste a Base64 payload or upload an image', 'error');
-    }
-  });
+  document.getElementById('xmp-title').textContent = metadata.title || 'Untitled';
+  document.getElementById('xmp-artist').textContent =
+    metadata.creation_credits?.artist || 'Unknown Artist';
+  document.getElementById('xmp-id').textContent =
+    metadata._identifiers?.artifactId || metadata.artifactId || '-';
+  document.getElementById('xmp-copyright').textContent =
+    metadata.ownership_and_rights?.copyright?.holder || '-';
+  document.getElementById('xmp-schema').textContent =
+    metadata.schemaVersion || '-';
 
-  // Back button
-  backBtn.addEventListener('click', () => {
-    resultsSection.classList.remove('active');
-    inputSection.style.display = 'block';
-    statusMessage.innerHTML = '';
-    pasteArea.value = '';
-  });
+  // SoulWhisper
+  const soulwhisperEl = document.getElementById('xmp-soulwhisper');
+  if (metadata.soulWhisper?.enabled && metadata.soulWhisper?.message) {
+    soulwhisperEl.classList.remove('hidden');
+    document.getElementById('xmp-soulwhisper-msg').textContent =
+      '"' + metadata.soulWhisper.message + '"';
+  } else {
+    soulwhisperEl.classList.add('hidden');
+  }
+}
 
-  // Process image file - try to extract metadata
-  async function processImageFile(file) {
-    showLoading(true);
-    showStatus('Analyzing image...', 'info');
+/**
+ * Display hash match results
+ */
+function displayHashMatch(result) {
+  showState('verified-hash');
 
-    try {
-      // Read file as ArrayBuffer to extract EXIF/XMP
-      const arrayBuffer = await file.arrayBuffer();
-      const payload = await extractPayloadFromImage(arrayBuffer, file.type);
+  const match = result.registry_matches[0];
+  const confidence = result.confidence;
 
+  // Confidence circle
+  const confidenceEl = document.getElementById('hash-confidence');
+  confidenceEl.classList.remove('high', 'medium', 'low');
+  confidenceEl.classList.add(confidence);
+
+  if (confidence === 'high') {
+    confidenceEl.textContent = '98%';
+  } else if (confidence === 'medium') {
+    confidenceEl.textContent = '85%';
+  } else {
+    confidenceEl.textContent = '70%';
+  }
+
+  document.getElementById('hash-title').textContent = match.title || 'Untitled';
+  document.getElementById('hash-artist').textContent = match.artist || 'Unknown';
+  document.getElementById('hash-id').textContent = match.artifactId || '-';
+  document.getElementById('hash-distance').textContent = match.distance + ' bits';
+}
+
+/**
+ * Verify an image URL
+ */
+async function verifyImage(imageUrl) {
+  showState('loading');
+  loadingText.textContent = 'Extracting metadata...';
+
+  try {
+    // Try XMP extraction first
+    loadingText.textContent = 'Checking embedded metadata...';
+
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+
+    if (window.GoldenCodexDecoder) {
+      const payload = await window.GoldenCodexDecoder.extractXMPFromBlob(blob);
       if (payload) {
-        await decodePayload(payload);
-      } else {
-        showLoading(false);
-        showNoMetadata();
-      }
-    } catch (error) {
-      showLoading(false);
-      showStatus(`Error processing image: ${error.message}`, 'error');
-    }
-  }
-
-  // Extract Golden Codex payload from image
-  async function extractPayloadFromImage(arrayBuffer, mimeType) {
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const dataString = uint8ArrayToString(uint8Array);
-
-    // Look for XMP packet
-    const xmpStart = dataString.indexOf('<x:xmpmeta');
-    const xmpEnd = dataString.indexOf('</x:xmpmeta>');
-
-    if (xmpStart !== -1 && xmpEnd !== -1) {
-      const xmpData = dataString.substring(xmpStart, xmpEnd + 12);
-
-      // Look for CodexPayload in XMP
-      const payloadMatch = xmpData.match(/gc:CodexPayload[^>]*>([^<]+)</);
-      if (payloadMatch) {
-        return payloadMatch[1].trim();
-      }
-
-      // Alternative: Look for base64 encoded data
-      const base64Match = xmpData.match(/CodexPayload="([^"]+)"/);
-      if (base64Match) {
-        return base64Match[1].trim();
+        loadingText.textContent = 'Decoding Golden Codex...';
+        const metadata = await window.GoldenCodexDecoder.decodeGCUIS(payload);
+        displayXmpMetadata(metadata);
+        return;
       }
     }
 
-    // PNG: Look in tEXt/iTXt chunks
-    if (mimeType === 'image/png') {
-      const payload = extractFromPNG(uint8Array);
-      if (payload) return payload;
-    }
+    // Fall back to hash matching
+    loadingText.textContent = 'Computing perceptual hash...';
 
-    return null;
-  }
+    if (window.GoldenCodexHash) {
+      const hash = await window.GoldenCodexHash.hashImageFromUrl(imageUrl);
 
-  // Extract from PNG chunks
-  function extractFromPNG(uint8Array) {
-    // PNG signature: 137 80 78 71 13 10 26 10
-    const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
-    const isPNG = pngSignature.every((byte, i) => uint8Array[i] === byte);
-    if (!isPNG) return null;
+      loadingText.textContent = 'Querying registry...';
 
-    let offset = 8; // Skip signature
-    const decoder = new TextDecoder('utf-8');
+      if (window.GoldenCodexAPI) {
+        const matchResult = await window.GoldenCodexAPI.matchHash(hash);
 
-    while (offset < uint8Array.length) {
-      // Read chunk length (4 bytes, big-endian)
-      const length = (uint8Array[offset] << 24) |
-                     (uint8Array[offset + 1] << 16) |
-                     (uint8Array[offset + 2] << 8) |
-                     uint8Array[offset + 3];
-
-      // Read chunk type (4 bytes)
-      const type = decoder.decode(uint8Array.slice(offset + 4, offset + 8));
-
-      if (type === 'tEXt' || type === 'iTXt') {
-        const chunkData = uint8Array.slice(offset + 8, offset + 8 + length);
-        const chunkString = decoder.decode(chunkData);
-
-        if (chunkString.includes('CodexPayload') || chunkString.includes('gc:')) {
-          // Extract the payload value
-          const parts = chunkString.split('\0');
-          if (parts.length >= 2) {
-            return parts[parts.length - 1].trim();
-          }
+        if (matchResult.success && matchResult.matches.length > 0) {
+          displayHashMatch({
+            registry_matches: matchResult.matches,
+            confidence: matchResult.matches[0].distance <= 3 ? 'high' :
+                        matchResult.matches[0].distance <= 7 ? 'medium' : 'low'
+          });
+          return;
         }
       }
-
-      // Move to next chunk (length + type + data + CRC)
-      offset += 12 + length;
-
-      // Safety check
-      if (offset > uint8Array.length + 1000) break;
     }
 
-    return null;
+    // Not found
+    showState('not-found');
+
+  } catch (error) {
+    console.error('Verification failed:', error);
+    showState('not-found');
   }
+}
 
-  // Decode payload and show results
-  async function decodePayload(payload) {
-    showLoading(true);
+/**
+ * Handle dropped files
+ */
+function handleDrop(e) {
+  e.preventDefault();
+  dropZone.classList.remove('active');
 
-    try {
-      const result = await GoldenCodexDecoder.decodePayload(payload);
-
-      showLoading(false);
-
-      if (result.success) {
-        const html = GoldenCodexDecoder.formatForDisplay(result.data);
-        metadataDisplay.innerHTML = html;
-        inputSection.style.display = 'none';
-        resultsSection.classList.add('active');
-      } else {
-        showStatus(`Decode failed: ${result.error}`, 'error');
-      }
-    } catch (error) {
-      showLoading(false);
-      showStatus(`Error: ${error.message}`, 'error');
-    }
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const url = URL.createObjectURL(file);
+    verifyImage(url);
   }
+}
 
-  // Show no metadata found
-  function showNoMetadata() {
-    metadataDisplay.innerHTML = `
-      <div class="no-metadata">
-        <div class="no-metadata-icon">🔍</div>
-        <h3>No Golden Codex Found</h3>
-        <p>This image doesn't contain Golden Codex metadata.</p>
-        <p style="margin-top: 12px; font-size: 12px;">
-          <a href="https://goldencodex.art" target="_blank" style="color: #c9a227;">
-            Learn how to add Golden Codex to your artworks →
-          </a>
-        </p>
-      </div>
-    `;
-    inputSection.style.display = 'none';
-    resultsSection.classList.add('active');
-  }
-
-  // Helper functions
-  function showStatus(message, type) {
-    statusMessage.innerHTML = `<div class="status ${type}">${message}</div>`;
-  }
-
-  function showLoading(show) {
-    loadingSection.style.display = show ? 'block' : 'none';
-    if (show) {
-      inputSection.style.display = 'none';
-      resultsSection.classList.remove('active');
-    }
-  }
-
-  function uint8ArrayToString(uint8Array) {
-    // Handle large arrays in chunks to avoid stack overflow
-    const chunkSize = 8192;
-    let result = '';
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.slice(i, i + chunkSize);
-      result += String.fromCharCode.apply(null, chunk);
-    }
-    return result;
-  }
-
-  // Check for image passed from context menu
-  chrome.storage.local.get(['pendingImage'], async (result) => {
-    if (result.pendingImage) {
-      showStatus('Processing image from context menu...', 'info');
-
-      try {
-        const response = await fetch(result.pendingImage);
-        const blob = await response.blob();
-        const file = new File([blob], 'image', { type: blob.type });
-        await processImageFile(file);
-      } catch (error) {
-        showStatus(`Error loading image: ${error.message}`, 'error');
-      }
-
-      // Clear the pending image
-      chrome.storage.local.remove('pendingImage');
-    }
-  });
+// Drop zone events
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('active');
 });
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('active');
+});
+
+dropZone.addEventListener('drop', handleDrop);
+
+// Check for pending verification from context menu
+chrome.storage.local.get('pendingVerification', (result) => {
+  if (result.pendingVerification) {
+    verifyImage(result.pendingVerification.imageUrl);
+    chrome.storage.local.remove('pendingVerification');
+  }
+});
+
+// Fetch registry stats
+async function fetchStats() {
+  if (window.GoldenCodexAPI) {
+    const stats = await window.GoldenCodexAPI.getHashStats();
+    if (stats.total_artworks) {
+      registryCount.textContent = stats.total_artworks.toLocaleString();
+    }
+  }
+}
+
+fetchStats();

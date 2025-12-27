@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#FFA500"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#dark)" stroke="url(#gold)" stroke-width="4"/>
+  <!-- Scroll/codex icon -->
+  <g fill="url(#gold)">
+    <!-- Scroll body -->
+    <rect x="36" y="32" width="56" height="64" rx="4"/>
+    <!-- Top roll -->
+    <ellipse cx="64" cy="32" rx="32" ry="8"/>
+    <!-- Bottom roll -->
+    <ellipse cx="64" cy="96" rx="32" ry="8"/>
+    <!-- Lines on scroll -->
+    <rect x="44" y="48" width="40" height="4" rx="2" fill="#1a1a2e"/>
+    <rect x="44" y="58" width="32" height="4" rx="2" fill="#1a1a2e"/>
+    <rect x="44" y="68" width="36" height="4" rx="2" fill="#1a1a2e"/>
+    <rect x="44" y="78" width="28" height="4" rx="2" fill="#1a1a2e"/>
+  </g>
+</svg>

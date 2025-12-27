@@ -5,10 +5,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="golden-codex-reader",
-    version="1.0.0",
+    version="2.0.0",
     author="Metavolve Labs, Inc.",
     author_email="curator@golden-codex.com",
-    description="Read and verify Golden Codex metadata from digital artworks",
+    description="Read, verify, and match Golden Codex metadata from digital artworks",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/codex-curator/golden-codex-reader",
@@ -36,6 +36,17 @@ setup(
     install_requires=[],
     extras_require={
         "exiftool": ["pyexiftool>=0.5.0"],
+        "hash": [
+            "imagehash>=4.3.0",
+            "Pillow>=9.0.0",
+            "requests>=2.28.0",
+        ],
+        "full": [
+            "pyexiftool>=0.5.0",
+            "imagehash>=4.3.0",
+            "Pillow>=9.0.0",
+            "requests>=2.28.0",
+        ],
     },
     entry_points={
         "console_scripts": [
@@ -50,5 +61,7 @@ setup(
         "xmp",
         "digital-art",
         "soulwhisper",
+        "perceptual-hash",
+        "image-matching",
     ],
 )

@@ -1,7 +1,7 @@
 {
   "name": "golden-codex-reader",
-  "version": "1.0.0",
-  "description": "Read and verify Golden Codex metadata from digital artworks",
+  "version": "2.0.0",
+  "description": "Read, verify, and match Golden Codex metadata from digital artworks with perceptual hash provenance",
   "main": "golden-codex-reader.js",
   "types": "golden-codex-reader.d.ts",
   "scripts": {
@@ -16,7 +16,10 @@
     "art",
     "nft",
     "digital-art",
-    "soulwhisper"
+    "soulwhisper",
+    "perceptual-hash",
+    "image-matching",
+    "verification"
   ],
   "author": "Metavolve Labs, Inc. <curator@golden-codex.com>",
   "license": "MIT",
@@ -31,7 +34,15 @@
   "dependencies": {
     "pako": "^2.1.0"
   },
+  "optionalDependencies": {
+    "sharp": "^0.33.0",
+    "jimp": "^0.22.0"
+  },
   "engines": {
     "node": ">=14.0.0"
+  },
+  "browser": {
+    "sharp": false,
+    "jimp": false
   }
 }

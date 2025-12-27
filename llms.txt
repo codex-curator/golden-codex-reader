@@ -1,5 +1,15 @@
 # Golden Codex - AI-Readable Documentation
-# https://goldencodex.art
+# The Ground Truth for Artificial General Intelligence
+# Encoding Humanity into the Neural Permaweb
+
+## License Notice
+
+Golden Codex metadata is FREE for: indexing, display, verification, research, independent AI.
+COMMERCIAL AI/ML MODEL TRAINING REQUIRES A LICENSE.
+Independent researchers and open-source projects: FREE.
+Enterprise and commercial use: Contact nexus@metavolvelabsinc.com
+
+Professionally curated, high-quality datasets available for enterprise licensing.
 
 ## What is Golden Codex?
 
@@ -55,7 +65,69 @@ JSON → GZIP → Base64 → XMP-gc:CodexPayload
 
 ## License
 
-MIT License - Copyright (c) 2025 Metavolve Labs, Inc. - Open source, free to use
+SDK/Reader: MIT License - Free to use, modify, distribute
+Metadata: Golden Codex Metadata License 1.0 - Free for indexing/display/verification
+          AI/ML Training requires commercial license
+          Contact: nexus@metavolvelabsinc.com
+
+Copyright (c) 2025 Metavolve Labs, Inc.
+
+## Aeternum Assets - Permanent Provenance
+
+Aeternum Assets are Golden Codex images with permanent, decentralized provenance on Arweave. Even if XMP metadata is stripped (social media, screenshots), the provenance can be recovered.
+
+### How It Works
+
+1. Aeternum Assets are marked with an invisible "GCX" watermark
+2. The Golden Codex metadata is stored on Arweave
+3. The Arweave address is derived from the image's perceptual hash (pHash)
+
+### Recovering Provenance (For AI/Crawlers)
+
+```python
+import imagehash
+from PIL import Image
+import requests
+
+def get_golden_codex(image_path):
+    # 1. Compute perceptual hash (same algorithm, deterministic)
+    img = Image.open(image_path)
+    phash = str(imagehash.phash(img, hash_size=16))
+
+    # 2. Construct Arweave URI using known convention
+    arweave_uri = f"https://arweave.net/golden-codex/{phash}.json"
+
+    # 3. Fetch directly - no API key, no database query
+    response = requests.get(arweave_uri)
+    if response.status_code == 200:
+        return response.json()
+    return None
+```
+
+### pHash Algorithm Specification
+
+- Library: `imagehash` (Python) or equivalent
+- Function: `imagehash.phash(image, hash_size=16)`
+- Output: 64-bit hexadecimal string (16 characters)
+- Robustness: Survives JPEG compression, resizing, minor crops
+
+### Arweave URI Convention
+
+```
+https://arweave.net/golden-codex/{pHash}.json
+```
+
+Example:
+- Image pHash: `a3f8c2d1e5b7f4a9`
+- Arweave URI: `https://arweave.net/golden-codex/a3f8c2d1e5b7f4a9.json`
+
+### Why This Matters
+
+- **No database queries** - The hash IS the address
+- **Permanent** - Arweave stores data for 200+ years
+- **Free to read** - Zero cost per lookup
+- **Survives social media** - pHash computed from pixels, not metadata
+- **AI-friendly** - Simple convention, easy to implement
 
 ## Example Use Cases
 
@@ -64,4 +136,15 @@ MIT License - Copyright (c) 2025 Metavolve Labs, Inc. - Open source, free to use
 - Read personal SoulWhisper messages
 - Index artwork by semantic meaning
 - Build gallery applications
-- Train AI models on rich art metadata
+- Train AI models on rich art metadata (license required)
+- **Recover provenance from screenshots** (Aeternum Assets)
+- **Verify NFT authenticity** across platforms
+
+---
+
+Tad MacPherson
+Founder & Lead Architect
+Metavolve Labs, Inc. | Golden Codex
+
+The Ground Truth for Artificial General Intelligence.
+Encoding Humanity into the Neural Permaweb.

@@ -1,17 +1,35 @@
 #!/usr/bin/env python3
 """
-GCUIS Decoder - Golden Codex Universal Infusion Standard
-Extraction and Decompression Utility
+Golden Codex Reader - Python SDK v2.0
+
+Complete SDK for reading, verifying, and matching Golden Codex metadata.
+Includes XMP extraction, GCUIS decoding, and perceptual hash matching.
 
 Usage:
     # Decode from Base64 file
-    python gcuis_decoder.py payload.b64 [output.json]
+    python golden_codex_reader.py payload.b64 [output.json]
 
     # Extract from image using ExifTool
-    python gcuis_decoder.py --extract image.png [output.json]
+    python golden_codex_reader.py --extract image.png [output.json]
 
     # Verify integrity
-    python gcuis_decoder.py --verify payload.b64 <expected_hash>
+    python golden_codex_reader.py --verify payload.b64 <expected_hash>
+
+    # Match hash against registry (NEW in v2.0)
+    python golden_codex_reader.py --match image.png
+
+SDK Functions:
+    # XMP/Metadata
+    decode_gcuis_payload(base64_payload) -> dict
+    extract_from_image(image_path) -> str
+    verify_integrity(payload, hash) -> bool
+
+    # Hash Matching (v2.0)
+    generate_phash(image_path) -> str
+    match_hash(hash, api_base, threshold) -> dict
+    verify_provenance(image_path, api_base) -> dict
+
+Copyright (c) 2025 Metavolve Labs, Inc.
 """
 
 import json
@@ -21,7 +39,32 @@ import hashlib
 import sys
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any, List
+
+# Optional imports for hash matching
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+try:
+    from PIL import Image
+    import imagehash
+    HAS_IMAGEHASH = True
+except ImportError:
+    HAS_IMAGEHASH = False
+
+
+# ============================================================================
+# SDK VERSION
+# ============================================================================
+
+__version__ = "2.0.0"
+SDK_VERSION = __version__
+
+# Default API endpoint for hash matching
+DEFAULT_API_BASE = "https://atlas-agent-172867820131.us-west1.run.app"
 
 
 def base64_decode(encoded_string):
@@ -207,6 +250,280 @@ def sanitize_artifact_id(artifact_id: Optional[str], fallback: str) -> str:
     return sanitized or "golden_codex"
 
 
+# ============================================================================
+# PERCEPTUAL HASH MATCHING (v2.0)
+# ============================================================================
+
+def generate_phash(image_path: str, hash_size: int = 16) -> str:
+    """
+    Generate a perceptual hash (pHash) for an image.
+
+    Uses DCT-based perceptual hashing which is robust to:
+    - Resizing and scaling
+    - Minor color adjustments
+    - JPEG compression (social media)
+
+    Args:
+        image_path: Path to the image file
+        hash_size: Size of the hash (16 = 256 bits, recommended)
+
+    Returns:
+        64-character hex string representing the 256-bit hash
+
+    Raises:
+        ImportError: If imagehash/PIL not installed
+        ValueError: If image cannot be loaded
+    """
+    if not HAS_IMAGEHASH:
+        raise ImportError(
+            "Hash matching requires 'imagehash' and 'Pillow'. "
+            "Install with: pip install imagehash Pillow"
+        )
+
+    try:
+        img = Image.open(image_path)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # Generate perceptual hash (DCT-based)
+        phash = imagehash.phash(img, hash_size=hash_size)
+        return str(phash)
+
+    except Exception as e:
+        raise ValueError(f"Failed to generate hash for {image_path}: {e}")
+
+
+def calculate_hash_similarity(hash1: str, hash2: str) -> float:
+    """
+    Calculate similarity percentage between two perceptual hashes.
+
+    Args:
+        hash1: First hash (hex string)
+        hash2: Second hash (hex string)
+
+    Returns:
+        Similarity as percentage (0-100)
+    """
+    if not HAS_IMAGEHASH:
+        raise ImportError("Hash comparison requires 'imagehash'. Install with: pip install imagehash")
+
+    h1 = imagehash.hex_to_hash(hash1)
+    h2 = imagehash.hex_to_hash(hash2)
+
+    # Hamming distance
+    distance = h1 - h2
+    max_distance = len(hash1) * 4  # 4 bits per hex char
+
+    return round((1 - distance / max_distance) * 100, 2)
+
+
+def match_hash(
+    hash_value: str,
+    api_base: str = DEFAULT_API_BASE,
+    threshold: float = 85.0
+) -> Dict[str, Any]:
+    """
+    Query the Golden Codex registry for matching artworks.
+
+    Sends the hash to the Atlas agent's /match-hash endpoint
+    which uses LSH-accelerated similarity search.
+
+    Args:
+        hash_value: Perceptual hash to search for (64 hex chars)
+        api_base: API base URL (default: production Atlas agent)
+        threshold: Minimum similarity percentage (0-100)
+
+    Returns:
+        Dict with:
+            - success: bool
+            - matches: List of matching artworks
+            - threshold: Applied threshold
+            - error: Error message if failed
+    """
+    if not HAS_REQUESTS:
+        raise ImportError(
+            "Hash matching requires 'requests'. "
+            "Install with: pip install requests"
+        )
+
+    try:
+        response = requests.post(
+            f"{api_base}/match-hash",
+            json={
+                "hash": hash_value,
+                "threshold": threshold
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            timeout=30
+        )
+
+        if response.status_code != 200:
+            return {
+                "success": False,
+                "error": f"API error {response.status_code}: {response.text}",
+                "matches": []
+            }
+
+        data = response.json()
+
+        return {
+            "success": True,
+            "matches": data.get("matches", []),
+            "threshold": data.get("threshold", threshold),
+            "index_stats": data.get("index_stats", {}),
+            "query_hash": hash_value
+        }
+
+    except requests.exceptions.Timeout:
+        return {
+            "success": False,
+            "error": "Request timed out",
+            "matches": []
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "matches": []
+        }
+
+
+def get_hash_stats(api_base: str = DEFAULT_API_BASE) -> Dict[str, Any]:
+    """
+    Get statistics about the hash index.
+
+    Args:
+        api_base: API base URL
+
+    Returns:
+        Dict with index statistics
+    """
+    if not HAS_REQUESTS:
+        raise ImportError("Requires 'requests'. Install with: pip install requests")
+
+    try:
+        response = requests.get(
+            f"{api_base}/hash-stats",
+            headers={"Accept": "application/json"},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"API error {response.status_code}"}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def verify_provenance(
+    image_path: str,
+    api_base: str = DEFAULT_API_BASE,
+    threshold: float = 85.0
+) -> Dict[str, Any]:
+    """
+    Complete provenance verification for an image.
+
+    This is the main entry point for verifying if an image is a registered
+    Golden Codex artwork. Works on ANY copy of the image - even degraded
+    versions from social media.
+
+    Flow:
+        1. Generate perceptual hash from image
+        2. Query Golden Codex registry for matches
+        3. Return provenance information if found
+
+    Args:
+        image_path: Path to the image file
+        api_base: API base URL for registry queries
+        threshold: Minimum similarity for a match (default 85%)
+
+    Returns:
+        Dict with:
+            - verified: bool - True if artwork found in registry
+            - method: str - Always "hash" for this function
+            - confidence: float - Match confidence percentage
+            - gcx_id: str - Golden Codex ID if found
+            - title: str - Artwork title if found
+            - artist: str - Artist name if found
+            - provenance_uri: str - Link to full provenance
+            - hash: str - The generated hash
+            - error: str - Error message if failed
+
+    Example:
+        >>> result = verify_provenance("artwork.jpg")
+        >>> if result["verified"]:
+        ...     print(f"Found: {result['title']} by {result['artist']}")
+        ...     print(f"Confidence: {result['confidence']}%")
+        ... else:
+        ...     print("Not found in registry")
+    """
+    try:
+        # Step 1: Generate hash
+        phash = generate_phash(image_path)
+
+        # Step 2: Query registry
+        result = match_hash(phash, api_base, threshold)
+
+        if not result["success"]:
+            return {
+                "verified": False,
+                "method": "hash",
+                "error": result.get("error", "Unknown error"),
+                "hash": phash
+            }
+
+        # Step 3: Process results
+        matches = result.get("matches", [])
+
+        if not matches:
+            return {
+                "verified": False,
+                "method": "hash",
+                "message": "No matching artwork found in registry",
+                "hash": phash,
+                "index_stats": result.get("index_stats", {})
+            }
+
+        # Return best match
+        best = matches[0]
+
+        return {
+            "verified": True,
+            "method": "hash",
+            "confidence": best.get("similarity", 0),
+            "gcx_id": best.get("gcx_id"),
+            "title": best.get("title"),
+            "artist": best.get("artist"),
+            "provenance_uri": best.get("provenance_uri"),
+            "hash": phash,
+            "match_details": best,
+            "alternate_matches": matches[1:] if len(matches) > 1 else [],
+            "index_stats": result.get("index_stats", {})
+        }
+
+    except ImportError as e:
+        return {
+            "verified": False,
+            "method": "hash",
+            "error": str(e)
+        }
+    except Exception as e:
+        return {
+            "verified": False,
+            "method": "hash",
+            "error": f"Verification failed: {e}"
+        }
+
+
+# ============================================================================
+# OUTPUT FUNCTIONS
+# ============================================================================
+
 def write_meta_file(gc_object, output_json_path: Path, calculated_hash: str,
                     extracted_hash: Optional[str], soulmark: Optional[str]) -> Path:
     """Persist a text summary next to the decoded JSON file"""
@@ -224,10 +541,14 @@ def write_meta_file(gc_object, output_json_path: Path, calculated_hash: str,
 
 def main():
     if len(sys.argv) < 2:
+        print(f"Golden Codex Reader v{SDK_VERSION}")
+        print()
         print("Usage:")
-        print("  Decode Base64 file:     python gcuis_decoder.py payload.b64 [output.json]")
-        print("  Extract from image:     python gcuis_decoder.py --extract image.png [output.json]")
-        print("  Verify integrity:       python gcuis_decoder.py --verify payload.b64 <hash>")
+        print("  Decode Base64 file:     python golden_codex_reader.py payload.b64 [output.json]")
+        print("  Extract from image:     python golden_codex_reader.py --extract image.png [output.json]")
+        print("  Verify integrity:       python golden_codex_reader.py --verify payload.b64 <hash>")
+        print("  Match hash (v2.0):      python golden_codex_reader.py --match image.png")
+        print("  Generate hash only:     python golden_codex_reader.py --hash image.png")
         sys.exit(1)
 
     mode = "decode"
@@ -236,36 +557,96 @@ def main():
     if input_file == "--extract":
         mode = "extract"
         if len(sys.argv) < 3:
-            print("❌ Error: Image path required for --extract mode")
+            print("Error: Image path required for --extract mode")
             sys.exit(1)
         input_file = sys.argv[2]
         output_file = Path(sys.argv[3]) if len(sys.argv) > 3 else Path("extracted_codex.json")
     elif input_file == "--verify":
         mode = "verify"
         if len(sys.argv) < 4:
-            print("❌ Error: Payload file and expected hash required for --verify mode")
+            print("Error: Payload file and expected hash required for --verify mode")
             sys.exit(1)
         input_file = sys.argv[2]
         expected_hash = sys.argv[3]
+    elif input_file == "--match":
+        mode = "match"
+        if len(sys.argv) < 3:
+            print("Error: Image path required for --match mode")
+            sys.exit(1)
+        input_file = sys.argv[2]
+    elif input_file == "--hash":
+        mode = "hash_only"
+        if len(sys.argv) < 3:
+            print("Error: Image path required for --hash mode")
+            sys.exit(1)
+        input_file = sys.argv[2]
     else:
         output_file = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("decoded_codex.json")
 
     input_path = Path(input_file)
 
-    print(f"🔍 GCUIS Decoder - Golden Codex Universal Infusion Standard")
-    print(f"📄 Input:  {input_path}")
+    print(f"Golden Codex Reader v{SDK_VERSION}")
+    print(f"Input:  {input_path}")
     print()
 
     try:
+        # Handle hash-only mode (v2.0)
+        if mode == "hash_only":
+            print("Generating perceptual hash...")
+            try:
+                phash = generate_phash(str(input_path))
+                print(f"Perceptual Hash: {phash}")
+                print(f"Hash length: {len(phash)} hex chars ({len(phash) * 4} bits)")
+            except ImportError as e:
+                print(f"Error: {e}")
+                sys.exit(1)
+            sys.exit(0)
+
+        # Handle match mode (v2.0)
+        if mode == "match":
+            print("Verifying provenance via hash matching...")
+            print()
+
+            result = verify_provenance(str(input_path))
+
+            if result.get("verified"):
+                print("=" * 60)
+                print("PROVENANCE VERIFIED")
+                print("=" * 60)
+                print(f"Confidence:    {result.get('confidence', 0):.1f}%")
+                print(f"GCX ID:        {result.get('gcx_id', 'N/A')}")
+                print(f"Title:         {result.get('title', 'N/A')}")
+                print(f"Artist:        {result.get('artist', 'N/A')}")
+                print(f"Provenance:    {result.get('provenance_uri', 'N/A')}")
+                print(f"Hash:          {result.get('hash', 'N/A')}")
+                print("=" * 60)
+
+                if result.get("alternate_matches"):
+                    print(f"\nAlternate matches: {len(result['alternate_matches'])}")
+            else:
+                print("=" * 60)
+                print("NOT FOUND IN REGISTRY")
+                print("=" * 60)
+                if result.get("error"):
+                    print(f"Error: {result['error']}")
+                elif result.get("message"):
+                    print(f"Message: {result['message']}")
+                if result.get("hash"):
+                    print(f"Hash: {result['hash']}")
+                print("=" * 60)
+
+            sys.exit(0 if result.get("verified") else 1)
+
+        # Handle extract mode
         if mode == "extract":
             # Extract from image using ExifTool
-            print("🔄 Extracting payload from image using ExifTool...")
+            print("Extracting payload from image using ExifTool...")
             config_path = Path(__file__).parent / "tools" / ".ExifTool_config"
             if not config_path.exists():
                 config_path = None
 
             base64_payload = extract_from_image(str(input_path), str(config_path) if config_path else None)
-            print(f"✓ Extracted {len(base64_payload):,} characters")
+            print(f"Extracted {len(base64_payload):,} characters")
             print()
 
             # Also try to extract hashes
@@ -276,9 +657,9 @@ def main():
             soulmark = extract_hash_from_image(str(input_path), "XMP-gc:Soulmark", str(config_path) if config_path else None)
 
             if gc_hash:
-                print(f"✓ Found GoldenCodexHash: {gc_hash[:16]}...{gc_hash[-16:]}")
+                print(f"Found GoldenCodexHash: {gc_hash[:16]}...{gc_hash[-16:]}")
             if soulmark:
-                print(f"✓ Found Soulmark:        {soulmark[:16]}...{soulmark[-16:]}")
+                print(f"Found Soulmark:        {soulmark[:16]}...{soulmark[-16:]}")
             print()
 
         elif mode == "verify":

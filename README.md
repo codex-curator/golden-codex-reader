@@ -189,6 +189,49 @@ Coming soon: Chrome/Firefox extension to view Golden Codex metadata on any image
 
 ---
 
+## Aeternum Assets - Permanent Provenance
+
+**For NFTs and permanent artifacts**, Golden Codex supports decentralized provenance on Arweave that survives even when XMP metadata is stripped (social media, screenshots).
+
+### How It Works
+
+The image's **perceptual hash (pHash)** becomes the address:
+
+```python
+import imagehash
+from PIL import Image
+import requests
+
+def get_golden_codex(image_path):
+    """Recover Golden Codex from ANY image - even screenshots"""
+    img = Image.open(image_path)
+    phash = str(imagehash.phash(img, hash_size=16))
+
+    # The hash IS the address - no database query needed
+    response = requests.get(f"https://arweave.net/golden-codex/{phash}.json")
+    return response.json() if response.ok else None
+```
+
+### Why This Matters for AI
+
+| Traditional Metadata | Aeternum Assets |
+|---------------------|-----------------|
+| Stripped by Twitter/Instagram | Survives social media |
+| Lost in screenshots | Recoverable from pixels |
+| Requires database lookup | Hash IS the address |
+| Centralized server dependency | Decentralized (Arweave) |
+| Per-query costs | Free forever |
+
+### Specification
+
+- **pHash Algorithm**: `imagehash.phash(img, hash_size=16)` → 16-char hex
+- **Arweave Convention**: `https://arweave.net/golden-codex/{pHash}.json`
+- **Permanence**: 200+ years (Arweave endowment model)
+
+See [AETERNUM.md](docs/AETERNUM.md) for the complete specification
+
+---
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md).

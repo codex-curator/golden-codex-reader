@@ -1,150 +1,148 @@
 /**
- * Golden Codex Reader - Content Script
- * Adds Golden Codex detection to web pages
- * Copyright (c) 2025 Metavolve Labs, Inc.
+ * Verilian Reader - Content Script
+ * Scans pages for images with Golden Codex metadata
  */
 
-(function() {
-  'use strict';
+// Badge styles
+const BADGE_STYLES = {
+  xmp: { bg: 'linear-gradient(135deg, #FFD700, #FFA500)', icon: '\u{1F4DC}' },
+  hash: { bg: 'linear-gradient(135deg, #9B59B6, #8E44AD)', icon: '\u{1F50D}' },
+  checking: { bg: '#888', icon: '\u231B' }
+};
 
-  // Add Golden Codex indicator badge to images
-  function addGoldenCodexBadge(img, hasMetadata) {
-    if (img.dataset.gcChecked) return;
-    img.dataset.gcChecked = 'true';
+/**
+ * Add Golden Codex badge to an image
+ */
+function addBadge(img, type, matchData = null) {
+  // Skip if already badged
+  if (img.dataset.gcxBadged) return;
+  img.dataset.gcxBadged = 'true';
 
-    // Only add badge to reasonably sized images
-    if (img.naturalWidth < 100 || img.naturalHeight < 100) return;
+  const style = BADGE_STYLES[type];
+  if (!style) return;
 
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-      position: relative;
-      display: inline-block;
-    `;
+  // Create badge container
+  const container = document.createElement('div');
+  container.className = 'gcx-badge-container';
+  container.style.cssText = 'position:absolute;top:8px;right:8px;z-index:9999;';
 
-    const badge = document.createElement('div');
-    badge.className = 'gc-badge';
-    badge.innerHTML = hasMetadata ? '📜' : '';
-    badge.title = hasMetadata
-      ? 'This image contains Golden Codex metadata. Click to view.'
-      : 'No Golden Codex metadata found';
-    badge.style.cssText = `
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 28px;
-      height: 28px;
-      background: ${hasMetadata ? 'linear-gradient(135deg, #7b2d8e, #c9a227)' : '#333'};
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 10000;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    `;
+  // Create badge
+  const badge = document.createElement('div');
+  badge.className = 'gcx-badge';
+  badge.style.cssText = 'background:' + style.bg + ';color:#fff;padding:4px 8px;' +
+    'border-radius:12px;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);' +
+    'display:flex;align-items:center;gap:4px;font-family:system-ui;';
+  badge.innerHTML = style.icon + '<span>Golden Codex</span>';
 
-    if (hasMetadata) {
-      badge.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        chrome.runtime.sendMessage({
-          action: 'decodeImage',
-          imageUrl: img.src
-        });
-      });
-    }
-
-    // Show badge on hover
-    const showBadge = () => { badge.style.opacity = '1'; };
-    const hideBadge = () => { badge.style.opacity = '0'; };
-
-    img.parentElement.style.position = 'relative';
-    img.parentElement.appendChild(badge);
-
-    img.addEventListener('mouseenter', showBadge);
-    img.addEventListener('mouseleave', hideBadge);
-    badge.addEventListener('mouseenter', showBadge);
-    badge.addEventListener('mouseleave', hideBadge);
+  // Store match data
+  if (matchData) {
+    badge.dataset.matchData = JSON.stringify(matchData);
   }
 
-  // Check if image has Golden Codex metadata
-  async function checkImageForGoldenCodex(img) {
-    // Skip data URLs and tiny images
-    if (img.src.startsWith('data:') || img.naturalWidth < 50) return;
-
-    try {
-      // For same-origin images, we can read the data
-      const response = await fetch(img.src);
-      const arrayBuffer = await response.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      const dataString = String.fromCharCode.apply(null, uint8Array.slice(0, 10000));
-
-      // Look for Golden Codex markers
-      const hasGC = dataString.includes('gc:CodexPayload') ||
-                    dataString.includes('GoldenCodex') ||
-                    dataString.includes('goldencodex');
-
-      if (hasGC) {
-        addGoldenCodexBadge(img, true);
-      }
-    } catch (error) {
-      // Cross-origin image - can't check, but still allow right-click
-      // The popup will handle the actual extraction
-    }
-  }
-
-  // Scan page for images
-  function scanImages() {
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-      if (img.complete) {
-        checkImageForGoldenCodex(img);
-      } else {
-        img.addEventListener('load', () => checkImageForGoldenCodex(img));
+  // Click to open popup
+  badge.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    chrome.runtime.sendMessage({
+      action: 'openPopup',
+      data: {
+        imageUrl: img.src,
+        matchData: matchData
       }
     });
-  }
+  });
 
-  // Watch for new images added to the page
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(node => {
-        if (node.nodeName === 'IMG') {
-          if (node.complete) {
-            checkImageForGoldenCodex(node);
+  container.appendChild(badge);
+
+  // Position container relative to image
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;display:inline-block;';
+  img.parentNode.insertBefore(wrapper, img);
+  wrapper.appendChild(img);
+  wrapper.appendChild(container);
+}
+
+/**
+ * Check an image for Golden Codex metadata
+ */
+async function checkImage(img) {
+  // Skip small images and already checked
+  if (img.width < 100 || img.height < 100) return;
+  if (img.dataset.gcxChecked) return;
+  img.dataset.gcxChecked = 'true';
+
+  try {
+    // Try to load decoder and hash scripts
+    if (!window.GoldenCodexAPI) {
+      console.log('[GCX] API not loaded yet');
+      return;
+    }
+
+    // Verify provenance
+    const result = await window.GoldenCodexAPI.verifyProvenance(img.src);
+
+    if (result.verified) {
+      addBadge(img, result.method, result);
+    }
+  } catch (error) {
+    console.log('[GCX] Check failed:', error.message);
+  }
+}
+
+/**
+ * Scan page for images
+ */
+function scanPage() {
+  const images = document.querySelectorAll('img');
+  images.forEach(img => {
+    if (img.complete) {
+      checkImage(img);
+    } else {
+      img.addEventListener('load', () => checkImage(img));
+    }
+  });
+}
+
+// Listen for messages from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'verifyImage') {
+    // Find image by URL and verify
+    const img = document.querySelector('img[src="' + message.imageUrl + '"]');
+    if (img) {
+      checkImage(img);
+    }
+  }
+});
+
+// Initial scan
+if (document.readyState === 'complete') {
+  scanPage();
+} else {
+  window.addEventListener('load', scanPage);
+}
+
+// Watch for new images
+const observer = new MutationObserver((mutations) => {
+  mutations.forEach(mutation => {
+    mutation.addedNodes.forEach(node => {
+      if (node.tagName === 'IMG') {
+        if (node.complete) {
+          checkImage(node);
+        } else {
+          node.addEventListener('load', () => checkImage(node));
+        }
+      }
+      if (node.querySelectorAll) {
+        node.querySelectorAll('img').forEach(img => {
+          if (img.complete) {
+            checkImage(img);
           } else {
-            node.addEventListener('load', () => checkImageForGoldenCodex(node));
+            img.addEventListener('load', () => checkImage(img));
           }
-        }
-        // Check for images inside added nodes
-        if (node.querySelectorAll) {
-          node.querySelectorAll('img').forEach(img => {
-            if (img.complete) {
-              checkImageForGoldenCodex(img);
-            } else {
-              img.addEventListener('load', () => checkImageForGoldenCodex(img));
-            }
-          });
-        }
-      });
+        });
+      }
     });
   });
+});
 
-  // Start observing
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  // Initial scan
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', scanImages);
-  } else {
-    scanImages();
-  }
-
-  console.log('Golden Codex Reader: Content script loaded');
-})();
+observer.observe(document.body, { childList: true, subtree: true });
