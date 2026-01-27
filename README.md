@@ -246,9 +246,9 @@ MIT License - See [LICENSE](LICENSE)
 
 ## Links
 
-- **Schema Specification**: [goldencodex.art/schema](https://goldencodex.art/schema)
+
 - **GitHub**: [github.com/codex-curator/golden-codex-reader](https://github.com/codex-curator/golden-codex-reader)
-- **Golden Codex Website**: [goldencodex.art](https://goldencodex.art)
+- **Golden Codex Website**: [golden-codex.com](https://golden-codex.com)
 
 ---
 
