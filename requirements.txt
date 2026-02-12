@@ -1,0 +1,9 @@
+# Core (no dependencies beyond stdlib for basic decoding)
+# ExifTool must be installed separately: https://exiftool.org
+
+# Optional: C2PA content credential reading
+# c2pa-python>=0.6.0
+
+# Optional: Perceptual hash generation
+# Pillow>=9.0
+# imagehash>=4.3
