@@ -221,7 +221,7 @@ print(f"Artifact: {result['artifact_id']}")
 
 ## Used By
 
-- **[Alexandria Aeternum 10K](https://huggingface.co/datasets/Metavolve-Labs/alexandria-aeternum-10k)** — 10,097 provenance-verified artworks with C2PA content credentials
+- **[Alexandria Aeternum 10K](https://huggingface.co/datasets/Metavolve-Labs/alexandria-aeternum-genesis)** — 10,097 provenance-verified artworks with C2PA content credentials
 - **[Alexandria Aeternum Genesis](https://huggingface.co/datasets/Metavolve-Labs/alexandria-aeternum-genesis)** — 1,000 artifact research sample
 
 ## Requirements

@@ -38,6 +38,6 @@ setup(
     project_urls={
         "Homepage": "https://golden-codex.com",
         "Bug Tracker": "https://github.com/codex-curator/golden-codex-reader/issues",
-        "Dataset": "https://huggingface.co/datasets/Metavolve-Labs/alexandria-aeternum-10k",
+        "Dataset": "https://huggingface.co/datasets/Metavolve-Labs/alexandria-aeternum-genesis",
     },
 )
